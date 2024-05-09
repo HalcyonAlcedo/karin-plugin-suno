@@ -33,7 +33,7 @@ export class hello extends plugin {
           // 必选 定时任务名称
           name: '获取suno歌曲',
           // 必选 cron表达式
-          cron: '*/5 * * * * *',
+          cron: '*/15 * * * * *',
           // 必选 方法名
           fnc: 'getMusic',
           // 是否显示操作日志 true=是 false=否
@@ -125,36 +125,45 @@ export class hello extends plugin {
         logger.info(`获取歌曲${sunoData.config.title ? '《' + sunoData.config.title + '》' : ''}信息 ${sunoData.ids}`)
         const data = await client.getAudioInformation(sunoData.ids)
         let msg = []
+        let music
         for (let info of data) {
           if (info.status === 'complete') {
-            // 音频发送有问题，只发视频
-            /**
-            if (Cfg.Config.video) {
-              msg.push(segment.video(info.video_url))
-            } else {
-              msg.push(segment.record(info.audio_url))
-            }
-            */
-            msg.push(segment.video(info.video_url))
-            if (Cfg.Config.share) {
-              msg.push(segment.share('https://suno.com/song/' + info.id, info.title, `风格 ${info.tags}`, info.image_url))
+            // 如果多次发送失败则发送链接
+            if(Cfg.Config.video) {
+              if (sunoData.retry < 5 || !sunoData.audio) {
+                msg.push(segment.video(info.video_url))
+              } else {
+                msg.push(segment.text(`歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`))
+              }
             }
             logger.info(`《${info.title}》(${info.id}) 歌曲生成完成`)
-            sunoData.send = true
           } else {
             logger.info(`《${info.title}》(${info.id}) 歌曲生成中`)
           }
         }
-        if (sunoData.send) {
+        if (msg.length > 0 || music) {
           let bot = Bot.adapter[parseInt(sunoData.bot)]
           // 发送消息
-          if (sunoData.isGroup) {
-            bot.SendMessage(KarinContact.group(parseInt(sunoData.contact.peer)), msg)
-            
-          } else {
-            bot.SendMessage(KarinContact.private(parseInt(sunoData.contact.peer)), msg)
+          try {
+            if (sunoData.isGroup) {
+              if (msg.length > 0) {
+                await bot.SendMessage(KarinContact.group(parseInt(sunoData.contact.peer)), msg)
+              }
+            } else {
+              if (msg.length > 0) {
+                await bot.SendMessage(KarinContact.private(parseInt(sunoData.contact.peer)), msg)
+              }
+            }
+            await redis.del(k)
+          } catch (error) {
+            logger.error(error.toString())
+            sunoData.retry = (sunoData.retry || 0) + 1
+            if (sunoData.retry > 5) {
+              await redis.del(k)
+            } else {
+              await redis.set(`Suno-${sunoData.ids}`, JSON.stringify(sunoData), { EX: 120 })
+            }
           }
-          await redis.del(k)
         }
       }
     }

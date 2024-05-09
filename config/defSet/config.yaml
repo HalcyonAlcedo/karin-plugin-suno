@@ -1,6 +1,4 @@
 # https://github.com/gcui-art/suno-api 部署的API地址
 api: 
-# 以视频形式发送(目前音频发送不了，默认视频发送)
-# video: false
-# 发送链接分享
-share: false
+# 发送视频
+video: false
