@@ -1,7 +1,9 @@
-import { plugin, segment } from '#Karin'
+import { Bot, plugin, segment, redis } from '#Karin'
 import Cfg from '../lib/config.js'
 import generateRandomStyle from '../suno/style.js'
 import SunoClient from '../suno/sunoClient.js'
+import { KarinContact } from '../../../lib/bot/KarinElement.js'
+
 export class hello extends plugin {
   constructor() {
     super({
@@ -51,7 +53,7 @@ export class hello extends plugin {
       const styleMatch = str.match(/风格[:：]?\s*([^歌词]+?)[\s\n]*歌词|$/)
       const lyricsMatch = str.match(/歌词[:：]?\s*(.+?)\s*$/)
       const title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : ''
-      const styles = styleMatch && styleMatch[1] ? styleMatch[1].trim().split(/[:：;\n\s]+/) : []
+      const styles = styleMatch && styleMatch[1] ? styleMatch[1].trim().split(/[:：;\n\s]+/).join(',') : ''
       const lyrics = lyricsMatch && lyricsMatch[1] ? lyricsMatch[1].trim() : ''
       return {
         title,
@@ -100,36 +102,59 @@ export class hello extends plugin {
         sender: this.e.sender,
         reply: this.e.reply
       })
+      await redis.set(`Suno-${ids.join(',')}`, JSON.stringify({
+        ids: ids.join(','),
+        config: sunConfig,
+        bot: this.e.self_id,
+        isGroup: this.e.isGroup,
+        contact: this.e.contact,
+        sender: this.e.sender
+      }), { EX: 120 })
+
       logger.info(`开始生成歌曲 ${ids.join(',')}`)
       this.reply('歌曲生成中', { at: false, recallMsg: 0, reply: true, button: false })
     }
   }
 
   async getMusic() {
-    if (this.sunoList.length > 0) {
+    let sunoList = await redis.keys('Suno-*')
+    if (sunoList.length > 0) {
       const client = new SunoClient({ api: Cfg.Config.api })
-      for (let i in this.sunoList) {
-        const data = await client.getAudioInformation(this.sunoList[i].ids)
+      for (let k of sunoList) {
+        let sunoData = JSON.parse(await redis.get(k))
+        logger.info(`获取歌曲${sunoData.config.title ? '《' + sunoData.config.title + '》' : ''}信息 ${sunoData.ids}`)
+        const data = await client.getAudioInformation(sunoData.ids)
         let msg = []
         for (let info of data) {
           if (info.status === 'complete') {
-            // 从队列移除
+            // 音频发送有问题，只发视频
+            /**
             if (Cfg.Config.video) {
               msg.push(segment.video(info.video_url))
             } else {
               msg.push(segment.record(info.audio_url))
             }
+            */
+            msg.push(segment.video(info.video_url))
             if (Cfg.Config.share) {
               msg.push(segment.share('https://suno.com/song/' + info.id, info.title, `风格 ${info.tags}`, info.image_url))
             }
-            this.sunoList[i].send = true
+            logger.info(`《${info.title}》(${info.id}) 歌曲生成完成`)
+            sunoData.send = true
           } else {
             logger.info(`《${info.title}》(${info.id}) 歌曲生成中`)
           }
         }
-        if (this.sunoList[i].send) {
-          await this.sunoList[i].reply(msg)
-          this.sunoList.splice(i, 1)
+        if (sunoData.send) {
+          let bot = Bot.adapter[parseInt(sunoData.bot)]
+          // 发送消息
+          if (sunoData.isGroup) {
+            bot.SendMessage(KarinContact.group(parseInt(sunoData.contact.peer)), msg)
+            
+          } else {
+            bot.SendMessage(KarinContact.private(parseInt(sunoData.contact.peer)), msg)
+          }
+          await redis.del(k)
         }
       }
     }
