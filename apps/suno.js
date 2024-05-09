@@ -49,12 +49,12 @@ export class hello extends plugin {
     const msg = this.e.msg
     const command = msg.replace(/^#(suno|Suno|唱歌)/, '')
     const getInfo = (str) => {
-      const titleMatch = str.match(/标题[:：]?\s*([^风格歌词]+?)[\s\n]*风格|$/)
-      const styleMatch = str.match(/风格[:：]?\s*([^歌词]+?)[\s\n]*歌词|$/)
-      const lyricsMatch = str.match(/歌词[:：]?\s*(.+?)\s*$/)
-      const title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : ''
-      const styles = styleMatch && styleMatch[1] ? styleMatch[1].trim().split(/[:：;\n\s]+/).join(',') : ''
-      const lyrics = lyricsMatch && lyricsMatch[1] ? lyricsMatch[1].trim() : ''
+      const titleMatch = str.match(/标题[:：]?\s*([^风格歌词]+?)(?=[风格歌词]|$)/)
+      const styleMatch = str.match(/风格[:：]?\s*([^歌词]+?)(?=[歌词]|$)/)
+      const lyricsMatch = str.match(/歌词[:：]?\s*([\s\S]+)/)
+      const title = titleMatch ? titleMatch[1].trim() : ''
+      const styles = styleMatch ? styleMatch[1].trim().split(/[:：;\n\s]+/).filter(Boolean).join(',') : ''
+      const lyrics = lyricsMatch ? lyricsMatch[1].trim() : ''
       return {
         title,
         styles,
