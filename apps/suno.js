@@ -129,7 +129,7 @@ export class hello extends plugin {
           if (info.status === 'complete') {
             // 如果多次发送失败则发送链接
             if(Cfg.Config.video) {
-              if (sunoData.retry < 5) {
+              if (sunoData.retry < 5 || !sunoData.retry) {
                 msg.push(segment.video(info.video_url))
               } else {
                 msg.push(segment.text(`歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`))
