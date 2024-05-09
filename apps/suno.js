@@ -100,6 +100,7 @@ export class hello extends plugin {
         sender: this.e.sender,
         reply: this.e.reply
       })
+      logger.info(`开始生成歌曲 ${ids.join(',')}`)
       this.reply('歌曲生成中', { at: false, recallMsg: 0, reply: true, button: false })
     }
   }
@@ -122,6 +123,8 @@ export class hello extends plugin {
               msg.push(segment.share('https://suno.com/song/' + info.id, info.title, `风格 ${info.tags}`, info.image_url))
             }
             this.sunoList[i].send = true
+          } else {
+            logger.info(`《${info.title}》(${info.id}) 歌曲生成中`)
           }
         }
         if (this.sunoList[i].send) {

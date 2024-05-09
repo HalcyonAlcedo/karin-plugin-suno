@@ -3,9 +3,6 @@
   "version": "0.0.1",
   "author": "Alcedo",
   "type": "module",
-  "dependencies": {
-    "axios": "^1.6.8"
-  },
   "imports": {
     "#Karin": "./lib/index.js"
   }

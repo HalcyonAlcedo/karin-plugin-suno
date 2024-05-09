@@ -1,29 +1,36 @@
-[Karin](https://github.com/karinjs/karin) 插件包模板仓库
 
+# Suno 插件
 ---
 
-- fork 本仓库
-- 拉取fork后的仓库到本地
-- 修改 `package.json` 文件中的 `name` 和 `description` 字段
-- 将 `README.md` 文件中的内容替换为自己的插件说明。
+## 安装插件
 
-## 克隆仓库
-
-karin根目录执行以下命令克隆仓库到本地
+karin根目录执行以下命令安装Suno插件
 
 ```bash
 git clone https://github.com/karinjs/karin-plugin-template.git ./plugins/karin-plugin-template
 ```
 
-## 安装依赖
+## 安装Suno-api
 
-```bash
-pnpm install --filter=karin-plugin-template
-```
+参考[Suno AI API](https://github.com/gcui-art/suno-api)进行安装
 
+## 配置
 
-## 开发调试
+修改Karin/plugins/karin-plugin-suno/config/config/config.yaml文件，将Suno-api添加到api中，例如api: http://127.0.0.1:3000
 
-```bash
-node . --dev
-```
+config.yaml文件会在首次运行后自动创建，也可以手动复制defSet中的config.yaml文件到config目录下然后修改
+
+## 用法
+
+### 提示词生成
+发送**#唱歌 一首欢快的歌**
+
+### 自定义生成
+发送**#唱歌 标题 欢乐颂 风格 Christmas Carol 歌词 Come! Sing a song of joy for peace shall come, my brother**
+
+缺少标题时将以发送人昵称为标题
+缺少风格时将随机生成风格
+
+## 相关链接
+[Karin](https://github.com/KarinJS/Karin) 
+[suno-api](https://github.com/gcui-art/suno-api) 
