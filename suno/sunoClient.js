@@ -10,7 +10,7 @@ export default class SunoClient {
             return false
         }
         if (config.mode == 'tags' && config.tags) {
-            return await generateAudioByPrompt({
+            return await this.generateAudioByPrompt({
                 prompt: config.tags,
                 make_instrumental: false,
                 wait_audio: false,
@@ -20,7 +20,7 @@ export default class SunoClient {
             if (!config.title || !config.styles || !config.lyrics) {
                 return false
             }
-            return await customGenerateAudio({
+            return await this.customGenerateAudio({
                 prompt: config.lyrics,
                 tags: config.styles,
                 title: config.title,

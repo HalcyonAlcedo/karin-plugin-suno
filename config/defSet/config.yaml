@@ -1,5 +1,5 @@
 # https://github.com/gcui-art/suno-api 部署的API地址
-api: ""
+api: 
 # 以视频形式发送
 video: false
 # 发送链接分析

@@ -35,7 +35,7 @@ export class hello extends plugin {
           // 必选 方法名
           fnc: 'getMusic',
           // 是否显示操作日志 true=是 false=否
-          log: false
+          log: true
         }
       ]
     })
@@ -46,19 +46,18 @@ export class hello extends plugin {
   async suno() {
     const msg = this.e.msg
     const command = msg.replace(/^#(suno|Suno|唱歌)/, '')
-    const getInfo = (strings) => {
-      return strings.map(str => {
-        const titleMatch = str.match(/标题[:：]?\s*([^风格歌词]+?)[\s\n]*风格|$/)
-        const styleMatch = str.match(/风格[:：]?\s*([^歌词]+?)[\s\n]*歌词|$/)
-        const lyricsMatch = str.match(/歌词[:：]?\s*(.+?)\s*$/)
-        // 将风格字符串分割为数组，使用中英文分号、换行、空格作为分隔符
-        const styles = styleMatch ? styleMatch[1].trim().split(/[:：;\n\s]+/) : []
-        return {
-          title: titleMatch ? titleMatch[1].trim() : '',
-          styles: styles,
-          lyrics: lyricsMatch ? lyricsMatch[1].trim() : ''
-        }
-      })
+    const getInfo = (str) => {
+      const titleMatch = str.match(/标题[:：]?\s*([^风格歌词]+?)[\s\n]*风格|$/)
+      const styleMatch = str.match(/风格[:：]?\s*([^歌词]+?)[\s\n]*歌词|$/)
+      const lyricsMatch = str.match(/歌词[:：]?\s*(.+?)\s*$/)
+      const title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : ''
+      const styles = styleMatch && styleMatch[1] ? styleMatch[1].trim().split(/[:：;\n\s]+/) : []
+      const lyrics = lyricsMatch && lyricsMatch[1] ? lyricsMatch[1].trim() : ''
+      return {
+        title,
+        styles,
+        lyrics
+      }
     }
 
     let sunoInfo = getInfo(command)
@@ -74,7 +73,7 @@ export class hello extends plugin {
     sunConfig.mode = 'customize'
     if (!sunoInfo.title) {
       // 无标题时以用户昵称作为标题
-      sunoInfo.title = e.sender.nick ? `${e.sender.nick}之歌` : '新的歌曲'
+      sunoInfo.title = this.e.sender.nick ? `${this.e.sender.nick}之歌` : '新的歌曲'
     }
     if (!sunoInfo.lyrics) {
       // 如果没有歌词则降级为提示词生成模式
@@ -87,7 +86,7 @@ export class hello extends plugin {
       // 生成随机风格
       sunConfig.styles = generateRandomStyle()
     }
-    const client = new SunoClient({ api: Cfg.api })
+    const client = new SunoClient({ api: Cfg.Config.api })
     const sunoMusics = await client.generateMusic(sunConfig)
     if (sunoMusics[0].id) {
       let ids = []
@@ -97,32 +96,29 @@ export class hello extends plugin {
       this.sunoList.push({
         ids: ids.join(','),
         config: sunConfig,
-
-          isGroup: this.e.isGroup,
-          sender: this.e.sender,
-          reply: this.e.reply
-
+        isGroup: this.e.isGroup,
+        sender: this.e.sender,
+        reply: this.e.reply
       })
       this.reply('歌曲生成中', { at: false, recallMsg: 0, reply: true, button: false })
     }
-    console.log(e)
   }
 
   async getMusic() {
     if (this.sunoList.length > 0) {
-      const client = new SunoClient({ api: Cfg.api })
+      const client = new SunoClient({ api: Cfg.Config.api })
       for (let i in this.sunoList) {
         const data = await client.getAudioInformation(this.sunoList[i].ids)
-        let msg =[]
+        let msg = []
         for (let info of data) {
           if (info.status === 'complete') {
             // 从队列移除
-            if (Cfg.video) {
+            if (Cfg.Config.video) {
               msg.push(segment.video(info.video_url))
             } else {
               msg.push(segment.record(info.audio_url))
             }
-            if (Cfg.share) {
+            if (Cfg.Config.share) {
               msg.push(segment.share('https://suno.com/song/' + info.id, info.title, `风格 ${info.tags}`, info.image_url))
             }
             this.sunoList[i].send = true
