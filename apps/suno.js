@@ -125,34 +125,31 @@ export class hello extends plugin {
         logger.info(`获取歌曲${sunoData.config.title ? '《' + sunoData.config.title + '》' : ''}信息 ${sunoData.ids}`)
         const data = await client.getAudioInformation(sunoData.ids)
         let msg = []
-        let music
         for (let info of data) {
           if (info.status === 'complete') {
             // 如果多次发送失败则发送链接
             if(Cfg.Config.video) {
-              if (sunoData.retry < 5 || !sunoData.audio) {
+              if (sunoData.retry < 5) {
                 msg.push(segment.video(info.video_url))
               } else {
                 msg.push(segment.text(`歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`))
               }
+            } else {
+              msg.push(segment.text(`歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`))
             }
             logger.info(`《${info.title}》(${info.id}) 歌曲生成完成`)
           } else {
             logger.info(`《${info.title}》(${info.id}) 歌曲生成中`)
           }
         }
-        if (msg.length > 0 || music) {
+        if (msg.length > 0) {
           let bot = Bot.adapter[parseInt(sunoData.bot)]
           // 发送消息
           try {
             if (sunoData.isGroup) {
-              if (msg.length > 0) {
                 await bot.SendMessage(KarinContact.group(parseInt(sunoData.contact.peer)), msg)
-              }
             } else {
-              if (msg.length > 0) {
                 await bot.SendMessage(KarinContact.private(parseInt(sunoData.contact.peer)), msg)
-              }
             }
             await redis.del(k)
           } catch (error) {
