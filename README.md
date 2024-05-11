@@ -7,7 +7,7 @@
 karin根目录执行以下命令安装Suno插件
 
 ```bash
-git clone https://github.com/karinjs/karin-plugin-template.git ./plugins/karin-plugin-template
+git clone https://github.com/HalcyonAlcedo/karin-plugin-suno.git ./plugins/karin-plugin-suno
 ```
 
 ## 安装Suno-api
