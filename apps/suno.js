@@ -37,7 +37,7 @@ export class hello extends plugin {
           // 必选 方法名
           fnc: 'getMusic',
           // 是否显示操作日志 true=是 false=否
-          log: true
+          log: false
         }
       ]
     })
