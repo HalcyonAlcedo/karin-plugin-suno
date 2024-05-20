@@ -3,6 +3,7 @@ import Cfg from '../lib/config.js'
 import generateRandomStyle from '../suno/style.js'
 import SunoClient from '../suno/sunoClient.js'
 import { KarinContact } from '../../../lib/bot/KarinElement.js'
+import axios from 'axios'
 
 export class hello extends plugin {
   constructor() {
@@ -64,29 +65,30 @@ export class hello extends plugin {
 
     let sunoInfo = getInfo(command)
     let sunConfig = sunoInfo
-    // 提示词生成模式
-    if (!sunoInfo.title && !sunoInfo.lyrics) {
+    if (!sunoInfo.lyrics) {
+      // 提示词生成模式
       sunConfig = {
         mode: 'tags',
         tags: command
       }
-    }
-    // 自定义生成模式
-    sunConfig.mode = 'customize'
-    if (!sunoInfo.title) {
-      // 无标题时以用户昵称作为标题
-      sunoInfo.title = this.e.sender.nick ? `${this.e.sender.nick}之歌` : '新的歌曲'
-    }
-    if (!sunoInfo.lyrics) {
-      // 如果没有歌词则降级为提示词生成模式
-      sunConfig = {
-        mode: 'tags',
-        tags: sunoInfo.title
+    } else {
+      // 自定义生成模式
+      sunConfig.mode = 'customize'
+      if (!sunoInfo.title) {
+        // 无标题时以用户昵称作为标题
+        sunoInfo.title = this.e.sender.nick ? `${this.e.sender.nick}之歌` : '新的歌曲'
       }
-    }
-    if (sunConfig.mode == 'customize' && !sunoInfo.styles) {
-      // 生成随机风格
-      sunConfig.styles = generateRandomStyle()
+      if (!sunoInfo.lyrics) {
+        // 如果没有歌词则降级为提示词生成模式
+        sunConfig = {
+          mode: 'tags',
+          tags: sunoInfo.title
+        }
+      }
+      if (sunConfig.mode == 'customize' && !sunoInfo.styles) {
+        // 生成随机风格
+        sunConfig.styles = generateRandomStyle()
+      }
     }
     const client = new SunoClient({ api: Cfg.Config.api })
     const sunoMusics = await client.generateMusic(sunConfig)
@@ -112,7 +114,7 @@ export class hello extends plugin {
       }), { EX: 120 })
 
       logger.info(`开始生成歌曲 ${ids.join(',')}`)
-      this.reply('歌曲生成中', { at: false, recallMsg: 0, reply: true, button: false })
+      this.reply('歌曲生成中', { reply: true, recallMsg: 8 })
     }
   }
 
@@ -124,42 +126,48 @@ export class hello extends plugin {
         let sunoData = JSON.parse(await redis.get(k))
         logger.info(`获取歌曲${sunoData.config.title ? '《' + sunoData.config.title + '》' : ''}信息 ${sunoData.ids}`)
         const data = await client.getAudioInformation(sunoData.ids)
-        let msg = []
         for (let info of data) {
           if (info.status === 'complete') {
-            // 如果多次发送失败则发送链接
-            if(Cfg.Config.video) {
-              if (sunoData.retry < 5 || !sunoData.retry) {
-                msg.push(segment.video(info.video_url))
-              } else {
-                msg.push(segment.text(`歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`))
-              }
-            } else {
-              msg.push(segment.text(`歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`))
+            // 发送消息
+            if (Cfg.Config.text) {
+              Bot.sendMsg(
+                parseInt(sunoData.bot),
+                sunoData.isGroup ? KarinContact.group(parseInt(sunoData.contact.peer)) : KarinContact.private(parseInt(sunoData.contact.peer)),
+                `歌曲 《${info.title}》 \n风格 ${info.tags} \n https://suno.com/song/${info.id}`
+              )
             }
+            // 发送音频
+            if (Cfg.Config.audio) {
+              axios.post(`${Cfg.Config.media}/audio`, {
+                recordUrl: info.audio_url
+              }).then((audioData) => {
+                const audioBuffer = Buffer.from(audioData.data.buffer.data)
+                Bot.sendMsg(
+                  parseInt(sunoData.bot),
+                  sunoData.isGroup ? KarinContact.group(parseInt(sunoData.contact.peer)) : KarinContact.private(parseInt(sunoData.contact.peer)),
+                  segment.record(`base64://${audioBuffer.toString('base64')}`)
+                )
+              }).catch(() => {
+                Bot.sendMsg(
+                  parseInt(sunoData.bot),
+                  sunoData.isGroup ? KarinContact.group(parseInt(sunoData.contact.peer)) : KarinContact.private(parseInt(sunoData.contact.peer)),
+                  '音频获取失败'
+                )
+              })
+            }
+            // 发送视频
+            if (Cfg.Config.video) {
+              Bot.sendMsg(
+                parseInt(sunoData.bot),
+                sunoData.isGroup ? KarinContact.group(parseInt(sunoData.contact.peer)) : KarinContact.private(parseInt(sunoData.contact.peer)),
+                segment.video(info.video_url),
+                { retry_count: 5 }
+              )
+            }
+            redis.del(k)
             logger.info(`《${info.title}》(${info.id}) 歌曲生成完成`)
           } else {
             logger.info(`《${info.title}》(${info.id}) 歌曲生成中`)
-          }
-        }
-        if (msg.length > 0) {
-          let bot = Bot.adapter[parseInt(sunoData.bot)]
-          // 发送消息
-          try {
-            if (sunoData.isGroup) {
-                await bot.SendMessage(KarinContact.group(parseInt(sunoData.contact.peer)), msg)
-            } else {
-                await bot.SendMessage(KarinContact.private(parseInt(sunoData.contact.peer)), msg)
-            }
-            await redis.del(k)
-          } catch (error) {
-            logger.error(error.toString())
-            sunoData.retry = (sunoData.retry || 0) + 1
-            if (sunoData.retry > 5) {
-              await redis.del(k)
-            } else {
-              await redis.set(`Suno-${sunoData.ids}`, JSON.stringify(sunoData), { EX: 120 })
-            }
           }
         }
       }

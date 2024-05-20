@@ -1,4 +1,10 @@
 # https://github.com/gcui-art/suno-api 部署的API地址
-api: 
+api:
+# media云转码api
+media: 
 # 发送视频
-video: true
+video: false
+# 发送音频
+audio: true
+# 发送文本
+text: true
