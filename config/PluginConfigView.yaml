@@ -1,0 +1,30 @@
+-
+  name: Suno插件配置
+  file: config.yaml
+  view:
+    -
+      key: SunoAPI
+      comment: suno-api项目的api地址
+      path: 'api'
+      type: 'url'
+    -
+      key: MediaAPI
+      comment: media云转码api的地址
+      path: 'media'
+      type: 'url'
+    -
+      key: 发送视频
+      comment: 回复歌曲时发送视频
+      path: 'video'
+      type: 'boolean'
+    -
+      key: 发送音频
+      comment: 回复歌曲时发送音频，需配置media
+      path: 'audio'
+      type: 'boolean'
+    -
+      key: 发送文本
+      comment: 回复歌曲时发送文本
+      path: 'text'
+      type: 'boolean'
+
