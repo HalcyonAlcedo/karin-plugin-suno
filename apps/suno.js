@@ -129,7 +129,7 @@ export class hello extends plugin {
       if (attempt < maxRetries) {
         attempt++
         logger.warn(`视频发送失败，正在进行第${attempt}次重试...`)
-        setTimeout(() => sendVideoMsg(data, maxRetries, attempt), 5000)
+        setTimeout(() => this.sendVideoMsg(data, maxRetries, attempt), 5000)
       } else {
         logger.error(`视频发送失败`)
       }
@@ -175,7 +175,7 @@ export class hello extends plugin {
             }
             // 发送视频
             if (Cfg.Config.video) {
-              sendVideoMsg({
+              this.sendVideoMsg({
                 bot: parseInt(sunoData.bot),
                 peer: parseInt(data.peer),
                 url: info.video_url
