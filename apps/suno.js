@@ -65,7 +65,7 @@ export class hello extends plugin {
 
     let sunoInfo = getInfo(command)
     let sunConfig = sunoInfo
-    if (!sunoInfo.lyrics) {
+    if (!sunoInfo.title) {
       // 提示词生成模式
       sunConfig = {
         mode: 'tags',
@@ -82,17 +82,17 @@ export class hello extends plugin {
         // 如果没有歌词则降级为提示词生成模式
         sunConfig = {
           mode: 'tags',
-          tags: sunoInfo.title
+          tags: command
         }
       }
-      if (sunConfig.mode == 'customize' && !sunoInfo.styles) {
-        // 生成随机风格
-        sunConfig.styles = generateRandomStyle()
-      }
+    }
+    if (sunConfig.mode == 'customize' && !sunoInfo.styles) {
+      // 生成随机风格
+      sunConfig.styles = generateRandomStyle()
     }
     const client = new SunoClient({ api: Cfg.Config.api })
     const sunoMusics = await client.generateMusic(sunConfig)
-    if (sunoMusics[0].id) {
+    if (sunoMusics && sunoMusics[0].id) {
       let ids = []
       for (let data of sunoMusics) {
         ids.push(data.id)
@@ -115,7 +115,25 @@ export class hello extends plugin {
 
       logger.info(`开始生成歌曲 ${ids.join(',')}`)
       this.reply('歌曲生成中', { reply: true, recallMsg: 8 })
+    } else {
+      this.reply('歌曲生成失败', { reply: true, recallMsg: 8 })
     }
+  }
+
+  sendVideoMsg(data, maxRetries =5, attempt = 0) {
+    Bot.sendMsg(
+      data.bot,
+      data.isGroup ? KarinContact.group(data.peer) : KarinContact.private(data.peer),
+      segment.video(data.url)
+    ).catch((error) => {
+      if (attempt < maxRetries) {
+        attempt++
+        logger.warn(`视频发送失败，正在进行第${attempt}次重试...`)
+        setTimeout(() => sendVideoMsg(data, maxRetries, attempt), 5000)
+      } else {
+        logger.error(`视频发送失败`)
+      }
+    })
   }
 
   async getMusic() {
@@ -157,12 +175,11 @@ export class hello extends plugin {
             }
             // 发送视频
             if (Cfg.Config.video) {
-              Bot.sendMsg(
-                parseInt(sunoData.bot),
-                sunoData.isGroup ? KarinContact.group(parseInt(sunoData.contact.peer)) : KarinContact.private(parseInt(sunoData.contact.peer)),
-                segment.video(info.video_url),
-                { retry_count: 5 }
-              )
+              sendVideoMsg({
+                bot: parseInt(sunoData.bot),
+                peer: parseInt(data.peer),
+                url: info.video_url
+              })
             }
             redis.del(k)
             logger.info(`《${info.title}》(${info.id}) 歌曲生成完成`)
