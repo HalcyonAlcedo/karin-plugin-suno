@@ -111,7 +111,7 @@ export class hello extends plugin {
         isGroup: this.e.isGroup,
         contact: this.e.contact,
         sender: this.e.sender
-      }), { EX: 120 })
+      }), { EX: Cfg.Config.timeout || 180 })
 
       logger.info(`开始生成歌曲 ${ids.join(',')}`)
       this.reply('歌曲生成中', { reply: true, recallMsg: 8 })
