@@ -27,4 +27,9 @@
       comment: 回复歌曲时发送文本
       path: 'text'
       type: 'boolean'
+    -
+      key: 超时时间
+      comment: 获取歌曲的超时时间
+      path: 'timeout'
+      type: 'number'
 
